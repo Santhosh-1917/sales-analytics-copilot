@@ -1,0 +1,53 @@
+# config/sources.yaml
+# Configure your data sources here. Add as many as needed.
+# The pipeline reads this file and handles each source automatically.
+
+sources:
+  - name: superstore_sales
+    type: csv                        # csv | api | postgres
+    path: data/raw/superstore.csv    # relative to project root
+    enabled: true
+
+    # Column mapping: maps YOUR column names → the standard schema
+    # Change the left side to match your actual CSV headers
+    column_map:
+      Order ID: order_id
+      Order Date: order_date
+      Ship Date: ship_date
+      Ship Mode: ship_mode
+      Customer ID: customer_id
+      Customer Name: customer_name
+      Segment: segment
+      Country: country
+      City: city
+      State: state
+      Region: region
+      Product ID: product_id
+      Category: category
+      Sub-Category: sub_category
+      Product Name: product_name
+      Sales: revenue
+      Quantity: quantity
+      Discount: discount_pct
+      Profit: profit
+
+    # Validation thresholds — adjust based on your data quality expectations
+    validation:
+      max_null_pct: 0.05             # fail if any column has >5% nulls
+      max_duplicate_pct: 0.02        # fail if >2% duplicate order IDs
+      date_range:
+        min: "2010-01-01"
+        max: "2030-12-31"
+      required_columns:
+        - order_id
+        - order_date
+        - revenue
+        - profit
+        - category
+        - region
+
+# Pipeline settings
+pipeline:
+  batch_size: 10000                  # rows per DB insert batch
+  log_rejected_rows: true            # save rejected rows to error_log table
+  run_log: true                      # track every pipeline run in run_log table

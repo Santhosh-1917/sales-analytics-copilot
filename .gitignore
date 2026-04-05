@@ -1,0 +1,28 @@
+# Environment
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+
+# macOS
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+
+# Data (large files — keep sample, ignore big dumps)
+data/raw/*.xlsx
+data/raw/*.xls
+data/processed/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Logs
+*.log

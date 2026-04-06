@@ -26,3 +26,9 @@ data/processed/
 
 # Logs
 *.log
+
+# Local dev tooling
+CLAUDE.md
+.claude/
+.kahuna/
+docs/images/generate_diagrams.py

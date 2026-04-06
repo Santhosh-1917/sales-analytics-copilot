@@ -1,0 +1,67 @@
+# .github/workflows/nightly.yml
+# Phase 7: Nightly ingestion + anomaly detection + alerting
+#
+# Required GitHub repository secrets:
+#   DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD
+#   ANTHROPIC_API_KEY
+#   SLACK_WEBHOOK_URL          (optional — Slack alerts)
+#   ALERT_EMAIL_FROM           (optional — email alerts)
+#   ALERT_EMAIL_TO             (optional)
+#   ALERT_EMAIL_PASSWORD       (optional — Gmail app password)
+
+name: Nightly Analytics Pipeline
+
+on:
+  schedule:
+    - cron: "0 6 * * *"   # 06:00 UTC daily (~10pm PT / 1am ET)
+  workflow_dispatch:        # allow manual trigger from GitHub Actions UI
+
+jobs:
+  ingest-and-alert:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Cache pip dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install prophet
+
+      - name: Run ingestion pipeline
+        env:
+          DB_HOST: ${{ secrets.DB_HOST }}
+          DB_PORT: ${{ secrets.DB_PORT }}
+          DB_NAME: ${{ secrets.DB_NAME }}
+          DB_USER: ${{ secrets.DB_USER }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+        run: python -m src.pipeline.ingest
+
+      - name: Run anomaly detection and send alerts
+        env:
+          DB_HOST: ${{ secrets.DB_HOST }}
+          DB_PORT: ${{ secrets.DB_PORT }}
+          DB_NAME: ${{ secrets.DB_NAME }}
+          DB_USER: ${{ secrets.DB_USER }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          ALERT_EMAIL_FROM: ${{ secrets.ALERT_EMAIL_FROM }}
+          ALERT_EMAIL_TO: ${{ secrets.ALERT_EMAIL_TO }}
+          ALERT_EMAIL_PASSWORD: ${{ secrets.ALERT_EMAIL_PASSWORD }}
+        run: python -m src.pipeline.alerts

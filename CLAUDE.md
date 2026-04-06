@@ -113,10 +113,10 @@ Known insight: discounts above 30% drive significant losses — especially in Fu
 - [x] Phase 2: sql/01_schema.sql (star schema + KPI views)
 - [x] Phase 3: src/analytics/anomalies.py + forecast.py
 - [x] Phase 4: src/tools/tool_layer.py
-- [ ] Phase 5: src/agent/copilot.py
-- [ ] Phase 6: src/app/streamlit_app.py
-- [ ] Phase 7: .github/workflows/nightly.yml + src/pipeline/alerts.py
-- [ ] Phase 8: docs/dashboard-setup.md
+- [x] Phase 5: src/agent/copilot.py
+- [x] Phase 6: src/app/streamlit_app.py
+- [x] Phase 7: .github/workflows/nightly.yml + src/pipeline/alerts.py
+- [x] Phase 8: docs/dashboard-setup.md
 
 ## What's Already Built
 
@@ -166,11 +166,44 @@ Run with `python -m src.tools.tool_layer`
 6. `generate_sql(question)` — calls Claude API → executes SELECT only (needs API key)
 - `TOOL_DEFINITIONS` list and `dispatch_tool(name, inputs)` dispatcher exported for copilot.py
 
+### Phase 5 — `src/agent/copilot.py`
+Run with `python -m src.agent.copilot` for interactive CLI.
+- `SalesCopilot` class: `chat(user_message) -> (str, list[tuple])`, `reset()`
+- Multi-turn tool loop: stop_reason=="tool_use" → dispatch → feed results → loop
+- tool_calls_made returned as list of (tool_name, tool_input, tool_result) for Streamlit chart rendering
+- History truncation at 20 turns: keeps first + last 18
+- Verified: "What was total revenue in 2017?" → correctly called generate_sql → returned $732,568.47
+
+### Phase 6 — `src/app/streamlit_app.py`
+Run with `streamlit run src/app/streamlit_app.py`
+- Streamlit Cloud secrets shim at top (falls back to .env locally)
+- Sidebar: live KPI snapshot (latest month revenue/margin with deltas) + anomaly count
+- Sidebar: 5 suggested question buttons that pre-fill the chat input
+- Charts auto-rendered based on which tools were called:
+  - get_kpis monthly → px.line, category → px.bar, regional → px.bar with color scale
+  - detect_anomalies_tool → px.scatter bubble chart by severity
+  - get_forecast_tool → go.Figure fan chart with 80% CI shaded band
+  - run_scenario → dual-line actual vs scenario profit chart
+  - drill_down → grouped bar by period
+
+### Phase 7 — `.github/workflows/nightly.yml` + `src/pipeline/alerts.py`
+- nightly.yml: runs at 06:00 UTC daily + workflow_dispatch manual trigger
+- Runs `python -m src.pipeline.ingest` then `python -m src.pipeline.alerts`
+- alerts.py: detects anomalies, filters to high/medium, sends Slack (Block Kit) + HTML email
+- Slack/email are skipped silently if env vars not set (safe for local runs)
+- Updates run_log.anomalies_found after alerting
+
+### Phase 8 — `docs/dashboard-setup.md`
+- Power BI DirectQuery setup (5 KPI views, recommended visuals)
+- Tableau Live connection setup (recommended sheets)
+- Read-only bi_reader PostgreSQL user SQL commands
+- Note on Power BI Gateway for private networks
+
 ## Known Issues / Gotchas
 - All scripts must be run as modules from project root: `python -m src.x.y` not `python src/x/y.py`
-- `ANTHROPIC_API_KEY` not yet set in .env — Tool 6 and Phase 5+ will fail without it
-- Prophet install: `pip install prophet` (not in requirements.txt yet — add it)
+- Prophet is NOT in requirements.txt — install separately: `pip install prophet`
+- streamlit and plotly are NOT in requirements.txt — install separately: `pip install streamlit plotly`
+- ANTHROPIC_API_KEY must be set in .env for Phase 5 (copilot), Phase 6 (UI), and Tool 6 (generate_sql)
+- Streamlit app imports src.* — must be launched from project root, not from inside src/app/
 
-## Next Up
-Build Phase 5: `src/agent/copilot.py` — agentic Claude reasoning loop using
-`TOOL_DEFINITIONS` and `dispatch_tool` from tool_layer.py.
+## Project Complete — All 8 Phases Built

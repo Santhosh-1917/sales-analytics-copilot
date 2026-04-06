@@ -4,7 +4,8 @@
 
 import json
 import os
-from anthropic import Anthropic
+import time
+from anthropic import Anthropic, RateLimitError
 from dotenv import load_dotenv
 from src.tools.tool_layer import TOOL_DEFINITIONS, dispatch_tool
 
@@ -70,13 +71,23 @@ class SalesCopilot:
         tool_calls_made: list[tuple] = []
 
         while True:
-            response = client.messages.create(
-                model=MODEL,
-                max_tokens=4096,
-                system=SYSTEM_PROMPT,
-                tools=TOOL_DEFINITIONS,
-                messages=self.conversation_history,
-            )
+            for attempt in range(3):
+                try:
+                    response = client.messages.create(
+                        model=MODEL,
+                        max_tokens=4096,
+                        system=SYSTEM_PROMPT,
+                        tools=TOOL_DEFINITIONS,
+                        messages=self.conversation_history,
+                    )
+                    break
+                except RateLimitError:
+                    if attempt < 2:
+                        wait = 60 * (attempt + 1)  # 60s, then 120s
+                        print(f"  [copilot] Rate limit hit — waiting {wait}s before retry...")
+                        time.sleep(wait)
+                    else:
+                        raise
 
             # Append full assistant response (may contain text + tool_use blocks)
             self.conversation_history.append(

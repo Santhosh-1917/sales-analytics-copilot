@@ -293,7 +293,15 @@ if prompt:
     # Get copilot response
     with st.chat_message("assistant"):
         with st.spinner("Analysing..."):
-            response, tool_calls = st.session_state.copilot.chat(prompt)
+            try:
+                response, tool_calls = st.session_state.copilot.chat(prompt)
+            except Exception as e:
+                err = str(e)
+                if "rate_limit" in err.lower() or "429" in err:
+                    response = "⚠️ Rate limit reached — you've hit the API token limit for this minute. Please wait 60 seconds and try again."
+                else:
+                    response = f"⚠️ Something went wrong: {err}"
+                tool_calls = []
 
         if tool_calls:
             tool_names = ", ".join(tc[0] for tc in tool_calls)

@@ -3,8 +3,13 @@
 # Run: streamlit run src/app/streamlit_app.py
 
 import os
+import sys
 import json
 import pandas as pd
+
+# Ensure project root is on the path so src.* imports resolve when launched via streamlit
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
+
 import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st

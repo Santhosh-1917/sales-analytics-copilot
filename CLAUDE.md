@@ -111,19 +111,66 @@ Known insight: discounts above 30% drive significant losses — especially in Fu
 ## Current Build Status
 - [x] Phase 1: src/pipeline/ingest.py (ETL + validation)
 - [x] Phase 2: sql/01_schema.sql (star schema + KPI views)
-- [ ] Phase 3: src/analytics/anomalies.py + forecast.py
-- [ ] Phase 4: src/tools/tool_layer.py
+- [x] Phase 3: src/analytics/anomalies.py + forecast.py
+- [x] Phase 4: src/tools/tool_layer.py
 - [ ] Phase 5: src/agent/copilot.py
 - [ ] Phase 6: src/app/streamlit_app.py
-- [ ] Phase 7: .github/workflows/nightly.yml
-- [ ] Phase 8: Dashboard integration
+- [ ] Phase 7: .github/workflows/nightly.yml + src/pipeline/alerts.py
+- [ ] Phase 8: docs/dashboard-setup.md
 
 ## What's Already Built
-- `src/pipeline/ingest.py` — full ETL pipeline with 5 validation checks,
-  dimension upserts, fact table loading, run_log and error_log tracking
-- `sql/01_schema.sql` — complete star schema + 5 KPI views
-- `config/sources.yaml` — configurable column mapping and validation thresholds
-- `requirements.txt` — all dependencies pinned
+
+### Phase 1 — `src/pipeline/ingest.py`
+Full ETL pipeline: reads `data/raw/Superstore.csv` (latin-1 encoding), validates,
+maps columns, deduplicates on `(order_id, product_id)`, upserts dimensions, loads
+fact_sales. Run: `python -m src.pipeline.ingest` from project root.
+- 9,986 rows loaded, 8 rejected (out of 9,994 raw rows)
+- Fixes applied vs original: `encoding="latin-1"` on read_csv; duplicate check changed
+  from `order_id` alone → `(order_id, product_id)` (orders have multiple line items)
+
+### Phase 2 — `sql/01_schema.sql`
+Star schema + 5 KPI views already applied to `sales_copilot` PostgreSQL DB.
+- DB: localhost:5432, user: santhosh, DB name: sales_copilot
+- Views: v_monthly_kpis, v_category_performance, v_regional_performance,
+  v_discount_impact, v_growth_rates
+- IMPORTANT: avg_discount_pct in all views is already multiplied by 100
+  (e.g. 25.0 = 25%). Do NOT multiply by 100 again in Python code.
+
+### Phase 3 — `src/analytics/anomalies.py` + `src/analytics/forecast.py`
+Run with `python -m src.analytics.anomalies` / `python -m src.analytics.forecast`
+(must use `-m` flag from project root for src.* imports to resolve).
+
+**anomalies.py** — 4 rules, all verified working:
+- Rule 1 margin_compression: revenue_mom > +2% AND profit_mom < -1%
+- Rule 2 discount_erosion: avg category discount > threshold (default 25%);
+  view is grouped by sub_category so must re-aggregate to category level in Pandas
+- Rule 3 regional_outlier: margin_pct < mean - 2σ across regions per period;
+  view has state rows so must re-aggregate to region level
+- Rule 4 growth_reversal: prev_mom > 0 AND curr_mom < 0 AND next_mom < 0
+- Output: 20 anomalies detected across 2014–2017 dataset
+
+**forecast.py** — Prophet + ARIMA, both verified working:
+- Prophet: Jan–Mar 2018 revenue forecast $45.7K / $32.9K / $72.1K
+- ARIMA: profit ~$8.5K/month for next 3 months
+- Series format: ds (datetime, first of month) + y (float)
+- Convert period 'YYYY-MM' → datetime by appending '-01'
+
+### Phase 4 — `src/tools/tool_layer.py`
+Run with `python -m src.tools.tool_layer`
+6 tools verified working (Tools 1–5 fully tested; Tool 6 requires ANTHROPIC_API_KEY):
+1. `get_kpis(period, granularity)` — routes to KPI view, returns {"kpis", "period", "granularity"}
+2. `detect_anomalies_tool(period, threshold)` — wraps anomalies.detect_anomalies()
+3. `drill_down(category, region, period)` — dynamic SQL with bound params only
+4. `get_forecast_tool(metric, horizon, segment)` — wraps forecast.get_forecast()
+5. `run_scenario(parameter, value, scope)` — what-if on last 12 months KPIs (pure Pandas)
+6. `generate_sql(question)` — calls Claude API → executes SELECT only (needs API key)
+- `TOOL_DEFINITIONS` list and `dispatch_tool(name, inputs)` dispatcher exported for copilot.py
+
+## Known Issues / Gotchas
+- All scripts must be run as modules from project root: `python -m src.x.y` not `python src/x/y.py`
+- `ANTHROPIC_API_KEY` not yet set in .env — Tool 6 and Phase 5+ will fail without it
+- Prophet install: `pip install prophet` (not in requirements.txt yet — add it)
 
 ## Next Up
-Build Phase 3: anomaly detection engine in src/analytics/anomalies.py
+Build Phase 5: `src/agent/copilot.py` — agentic Claude reasoning loop using
+`TOOL_DEFINITIONS` and `dispatch_tool` from tool_layer.py.

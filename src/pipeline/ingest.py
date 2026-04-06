@@ -35,7 +35,7 @@ def extract(source: dict) -> pd.DataFrame:
     print(f"  [extract] Reading from {src_type}: {source.get('path', source.get('name'))}")
 
     if src_type == "csv":
-        df = pd.read_csv(source["path"], low_memory=False)
+        df = pd.read_csv(source["path"], low_memory=False, encoding="latin-1")
     elif src_type == "postgres":
         engine = get_engine()
         df = pd.read_sql(source["query"], engine)
@@ -86,9 +86,10 @@ def validate(df: pd.DataFrame, source: dict) -> tuple[pd.DataFrame, list[dict]]:
             })
         clean_mask &= ~null_mask
 
-    # 3. Duplicate order_id check
-    if "order_id" in df.columns:
-        dup_mask = df.duplicated(subset=["order_id"], keep="first")
+    # 3. Duplicate check on (order_id, product_id) — one order can have many line items
+    dup_subset = [c for c in ["order_id", "product_id"] if c in df.columns]
+    if dup_subset:
+        dup_mask = df.duplicated(subset=dup_subset, keep="first")
         dup_pct = dup_mask.mean()
         if dup_pct > max_dup_pct:
             print(f"  [validate] WARNING: {dup_pct:.1%} duplicate order IDs (threshold: {max_dup_pct:.1%})")
@@ -96,7 +97,7 @@ def validate(df: pd.DataFrame, source: dict) -> tuple[pd.DataFrame, list[dict]]:
             rejected.append({
                 "row_number": int(idx),
                 "raw_data": str(df.loc[idx].to_dict()),
-                "rejection_reason": "duplicate_order_id"
+                "rejection_reason": "duplicate_order_line"
             })
         clean_mask &= ~dup_mask
 

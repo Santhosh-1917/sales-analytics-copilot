@@ -1,12 +1,11 @@
 # Automated Sales Analytics Copilot
 
-> An end-to-end agentic analytics system that ingests multi-source sales data, computes KPIs, detects business anomalies, answers natural language questions via text-to-SQL, models what-if scenarios, and delivers automated alerts — all powered by the Claude API.
+> An end-to-end agentic analytics system that ingests multi-source sales data, computes KPIs, detects business anomalies, answers natural language questions via text-to-SQL, models what-if scenarios, and delivers automated alerts 
 
 Built by **Santhosh Narayanan Baburaman** | USC MS Analytics | Targeting Data Analyst / Business Analyst roles
 
 [![Python](https://img.shields.io/badge/Python-3.11+-blue.svg)](https://python.org)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15+-336791.svg)](https://postgresql.org)
-[![Claude API](https://img.shields.io/badge/Claude-claude--sonnet--4--6-orange.svg)](https://anthropic.com)
 [![Streamlit](https://img.shields.io/badge/Streamlit-Chat_UI-FF4B4B.svg)](https://streamlit.io)
 
 ---

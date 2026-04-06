@@ -23,36 +23,15 @@ The copilot reasons over a live PostgreSQL database using 6 structured tools, de
 
 ---
 
+## App Preview
+
+![Streamlit Chat UI](docs/images/app_screenshot.png)
+
+---
+
 ## Architecture
 
-```
-Data Sources (CSV / API / PostgreSQL)
-              ↓
-   Ingestion & Validation Pipeline
-         (pandas + SQLAlchemy)
-              ↓
-  PostgreSQL Star Schema + 5 KPI Views
-              ↓
-  ┌───────────────────────────────┐
-  │     Analytics Engine          │
-  │  • 4-Rule Anomaly Detection   │
-  │  • Prophet + ARIMA Forecast   │
-  └───────────────────────────────┘
-              ↓
-  ┌───────────────────────────────┐
-  │     Structured Tool Layer     │
-  │  get_kpis · detect_anomalies  │
-  │  drill_down · get_forecast    │
-  │  run_scenario · generate_sql  │
-  └───────────────────────────────┘
-              ↓
-     Agentic Claude Reasoning Loop
-       (multi-step tool calling)
-         ↙              ↘
-  Streamlit           GitHub Actions
-  Chat UI          Nightly Pipeline +
-  + Charts       Slack / Email Alerts
-```
+![Architecture Diagram](docs/images/architecture.png)
 
 ---
 
